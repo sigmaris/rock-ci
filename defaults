@@ -1,0 +1,6 @@
+# Sourced by scripts to set "known good" default sources if not building a particular commit
+DEF_TF_A_REPO="https://github.com/ARM-software/arm-trusted-firmware.git"
+DEF_TF_A_REF="v2.6"
+
+DEF_U_BOOT_REPO="https://github.com/u-boot/u-boot.git"
+DEF_U_BOOT_REF="v2022.01"

@@ -1,0 +1,30 @@
+name: build
+
+on:
+  push:
+
+jobs:
+  build_tf_a:
+    runs-on: ubuntu-20.04
+    container: sigmaris/aarch64-linux-crossbuilder:latest
+    env:
+      WORKDIR: "${{ github.workspace }}/work"
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v2
+      
+      - name: Create working directory
+        run: mkdir "$WORKDIR"
+      
+      - name: Clone TF-A
+        run: scripts/clone_tfa.sh
+      
+      - name: Build TF-A
+        id: build_step
+        run: scripts/build_tfa.sh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: bl31
+          path: ${{ steps.build_step.outputs.bl31 }}
