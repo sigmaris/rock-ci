@@ -56,3 +56,12 @@ jobs:
         env:
           BL31: "${{ github.workspace }}/work/bl31.elf"
         run: scripts/build_uboot.sh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: uboot
+          path: |
+            ${{ steps.build_uboot.outputs.mmc_idbloader }}
+            ${{ steps.build_uboot.outputs.spi_idbloader }}
+            ${{ steps.build_uboot.outputs.itb }}
