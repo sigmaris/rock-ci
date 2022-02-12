@@ -65,3 +65,12 @@ jobs:
             ${{ steps.build_uboot.outputs.mmc_idbloader }}
             ${{ steps.build_uboot.outputs.spi_idbloader }}
             ${{ steps.build_uboot.outputs.itb }}
+
+  deploy_tftp:
+    runs-on: [self-hosted, tftp-server]
+    needs: build_u_boot
+    steps:
+      - name: Download u-boot binaries to TFTP server
+        uses: actions/download-artifact@v2
+        with:
+          name: uboot
