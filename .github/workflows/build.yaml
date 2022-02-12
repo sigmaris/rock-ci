@@ -2,13 +2,60 @@ name: build
 
 on:
   push:
+  workflow_dispatch:
+    inputs:
+      board_name:
+        description: Name of board to use for testing
+        type: string
+        required: false
+      tf_a_repo:
+        description: TF-A Git repository to use
+        type: string
+        required: false
+      tf_a_ref:
+        description: TF-A Git ref to use
+        type: string
+        required: false
+      u_boot_repo:
+        description: U-Boot Git repository to use
+        type: string
+        required: false
+      u_boot_ref:
+        description: U-Boot Git ref to use
+        type: string
+        required: false
 
 jobs:
+  vars:
+    runs-on: ubuntu-20.04
+    env:
+      BOARD_NAME_WD: "${{ github.event.inputs.board_name }}"
+      TF_A_REPO_WD: "${{ github.event.inputs.tf_a_repo }}"
+      TF_A_REF_WD: "${{ github.event.inputs.tf_a_ref }}"
+      U_BOOT_REPO_WD: "${{ github.event.inputs.u_boot_repo }}"
+      U_BOOT_REF_WD: "${{ github.event.inputs.u_boot_ref }}"
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v2
+      
+      - id: resolve_vars
+        name: Resolve variables
+        run: scripts/resolve_vars.sh
+    outputs:
+      board_name: ${{ steps.resolve_vars.outputs.board_name }}
+      tf_a_repo: ${{ steps.resolve_vars.outputs.tf_a_repo }}
+      tf_a_ref: ${{ steps.resolve_vars.outputs.tf_a_ref }}
+      u_boot_repo: ${{ steps.resolve_vars.outputs.u_boot_repo }}
+      u_boot_ref: ${{ steps.resolve_vars.outputs.u_boot_ref }}
+
   build_tf_a:
     runs-on: ubuntu-20.04
     container: sigmaris/aarch64-linux-crossbuilder:latest
     env:
       WORKDIR: "${{ github.workspace }}/work"
+      TF_A_REPO: ${{ needs.vars.outputs.tf_a_repo }}
+      TF_A_REF: ${{ needs.vars.outputs.tf_a_ref }}
+    needs: vars
     steps:
       - name: Check out source code
         uses: actions/checkout@v2
@@ -34,7 +81,9 @@ jobs:
     container: sigmaris/aarch64-linux-crossbuilder:latest
     env:
       WORKDIR: "${{ github.workspace }}/work"
-    needs: build_tf_a
+      U_BOOT_REPO: ${{ needs.vars.outputs.u_boot_repo }}
+      U_BOOT_REF: ${{ needs.vars.outputs.u_boot_ref }}
+    needs: [build_tf_a, vars]
     steps:
       - name: Check out source code
         uses: actions/checkout@v2
@@ -65,12 +114,19 @@ jobs:
             ${{ steps.build_uboot.outputs.mmc_idbloader }}
             ${{ steps.build_uboot.outputs.spi_idbloader }}
             ${{ steps.build_uboot.outputs.itb }}
+            ${{ steps.build_uboot.outputs.test_scr }}
 
   deploy_tftp:
     runs-on: [self-hosted, tftp-server]
-    needs: build_u_boot
+    needs: [build_u_boot, vars]
     steps:
-      - name: Download u-boot binaries to TFTP server
+      - name: Download u-boot binaries
         uses: actions/download-artifact@v2
         with:
           name: uboot
+          path: uboot
+      
+      - name: Deploy u-boot binaries to TFTP server
+        run: |
+          source ~/board_${{ needs.vars.outputs.board_name }}.conf
+          cp uboot/* ${TFTP_DIR}

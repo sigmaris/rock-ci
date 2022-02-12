@@ -1,0 +1,6 @@
+setenv blink_work 'led work on; sleep 0.1; led work off; sleep 0.1'
+setenv blink_diy 'led diy on; sleep 0.1; led diy off; sleep 0.1'
+
+echo "Hello, world!"
+
+while true; do run blink_diy; run blink_work; done
