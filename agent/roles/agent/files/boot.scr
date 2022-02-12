@@ -1,0 +1,3 @@
+# Default boot script for u-boot - chain load a MAC-address-specific script via TFTP
+setexpr dashaddr gsub : - ${ethaddr}
+if tftpboot ${scriptaddr} ${dashaddr}/boot.scr.uimg; then source ${scriptaddr}; fi

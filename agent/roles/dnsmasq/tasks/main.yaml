@@ -1,0 +1,30 @@
+---
+- name: Install required apt packages
+  package:
+    name: dnsmasq
+    state: present
+
+- name: Make tftp directory
+  file:
+    path: /srv/tftp
+    state: directory
+    mode: 'u=rwx,g=rx,o=rx'
+    owner: dnsmasq
+    group: root
+
+- name: Configure dnsmasq
+  template:
+    src: dnsmasq.conf.j2
+    dest: /etc/dnsmasq.conf
+    mode: 'u=rw,g=r,o=r'
+    owner: root
+    group: root
+  notify:
+    - restart dnsmasq
+
+- name: Start and enable dnsmasq.service
+  systemd:
+    daemon_reload: true
+    name: dnsmasq.service
+    enabled: true
+    state: started

@@ -1,0 +1,40 @@
+---
+# Sets up misc. things required for the agent to control network-booted boards
+- name: Install required apt packages
+  package:
+    name: u-boot-tools
+    state: present
+
+- name: Copy default u-boot script source
+  copy:
+    src: boot.scr
+    dest: /srv/tftp/boot.scr
+  register: boot_scr_copy
+
+- name: Check default u-boot script uImage
+  stat:
+    path: /srv/tftp/boot.scr.uimg
+  register: boot_scr_uimg
+
+- name: Make uImage from default u-boot script
+  command: mkimage -C none -A arm -T script -d /srv/tftp/boot.scr /srv/tftp/boot.scr.uimg
+  when: boot_scr_copy.changed or (boot_scr_uimg.isreg is not defined)
+
+- name: Create TFTP server subdirectory for each board, writable by github action runner
+  file:
+    path: /srv/tftp/{{ board.mac_addr.split(":") | join("-") }}
+    state: directory
+    owner: root
+    group: "{{ ghaction_group }}"
+    mode: "u=rwx,g=rwx,o=rx"
+  loop: "{{ boards }}"
+  loop_control:
+    loop_var: board
+
+- name: Define DHCP settings for each board
+  template:
+    src: dhcp_board.conf.j2
+    dest: /etc/dnsmasq.d/{{ board.name }}.conf
+  loop: "{{ boards }}"
+  loop_control:
+    loop_var: board

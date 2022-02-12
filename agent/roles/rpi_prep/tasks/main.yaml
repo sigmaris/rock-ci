@@ -1,0 +1,17 @@
+---
+# Tasks to prep Raspberry Pi running Pi OS to be a host for board(s) under test
+
+# We need to use this UART to talk to the board under test
+- name: Disable login getty on serial port
+  systemd:
+    daemon_reload: true
+    name: serial-getty@ttyAMA0.service
+    enabled: false
+    state: stopped
+
+- name: Disable DHCP client daemon on interfaces connected to boards
+  template:
+    src: dhcpcd.conf.j2
+    dest: /etc/dhcpcd.conf
+  notify:
+    - restart dhcpcd

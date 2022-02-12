@@ -1,0 +1,42 @@
+---
+- hosts: ci_hosts
+  vars:
+    github_account: sigmaris
+    github_repo: rock-ci
+
+  tasks:
+    - include_role:
+        name: rpi_prep
+      vars:
+        dnsmasq_interfaces: "{{ interfaces }}"
+
+    - include_role:
+        name: dnsmasq
+      vars:
+        dnsmasq_interfaces: "{{ interfaces }}"
+
+    - name: Create user for actions runner
+      user:
+        name: ghaction
+        group: ghaction
+        home: /opt/ghaction
+        create_home: true
+        comment: GitHub actions runner
+        system: true
+        shell: /sbin/nologin
+
+    - include_role:
+        name: agent
+      vars:
+        ghaction_group: ghaction
+
+    - include_role:
+        name: monolithprojects.github_actions_runner
+      vars:
+        runner_user: ghaction
+        runner_dir: /opt/ghaction/runner
+        runner_state: "started"
+        hide_sensitive_logs: false
+        runner_labels:
+          - dhcp-server
+          - tftp-server
