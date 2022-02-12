@@ -1,0 +1,3 @@
+MAC_ADDR="{{ board.mac_addr }}"
+TFTP_DIR="/srv/tftp/{{ board.mac_addr.split(":") | join("-") }}"
+IP_ADDR="{{ board.ip_addr }}"

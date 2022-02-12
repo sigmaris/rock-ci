@@ -38,3 +38,11 @@
   loop: "{{ boards }}"
   loop_control:
     loop_var: board
+
+- name: Store each board configuration in a file for Github Actions
+  template:
+    src: action_board.conf.j2
+    dest: /opt/ghaction/board_{{ board.name }}.conf
+  loop: "{{ boards }}"
+  loop_control:
+    loop_var: board
