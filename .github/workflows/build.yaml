@@ -104,7 +104,7 @@ jobs:
         id: build_uboot
         env:
           BL31: "${{ github.workspace }}/work/bl31.elf"
-          TFTP_PREFIX: "${{ github.run_id }}-"
+          TFTP_RUN_DIR: "${{ github.run_id }}"
         run: scripts/build_uboot.sh
 
       - name: Upload build artifact
@@ -123,6 +123,7 @@ jobs:
       itb: ${{ steps.build_uboot.outputs.itb }}
       emmc_test_scr: ${{ steps.build_uboot.outputs.emmc_test_scr }}
       sd_test_scr: ${{ steps.build_uboot.outputs.sd_test_scr }}
+      tftp_run_dir: ${{ github.run_id }}
 
   deploy_tftp:
     runs-on: [self-hosted, tftp-server]
@@ -138,6 +139,8 @@ jobs:
         id: deploy
         run: |
           source ~/board_${{ needs.vars.outputs.board_name }}.conf
+          TFTP_RUN_DIR="${TFTP_DIR}/${{ needs.build_u_boot.outputs.tftp_run_dir }}"
+          mkdir -p "$TFTP_RUN_DIR"
           for uboot_file in \
             '${{ needs.build_u_boot.outputs.mmc_idbloader }}' \
             '${{ needs.build_u_boot.outputs.spi_idbloader }}' \
@@ -145,8 +148,11 @@ jobs:
             '${{ needs.build_u_boot.outputs.emmc_test_scr }}' \
             '${{ needs.build_u_boot.outputs.sd_test_scr }}'
           do
-            cp "uboot/${uboot_file}" "${TFTP_DIR}/${uboot_file}"
+            cp "uboot/${uboot_file}" "${TFTP_RUN_DIR}/${uboot_file}"
           done
+          echo "::set-output name=full_tftp_run_dir::$TFTP_RUN_DIR"
+    outputs:
+      full_tftp_run_dir: ${{ steps.deploy.outputs.full_tftp_run_dir }}
 
   test_uboot:
     runs-on: [self-hosted, "${{ needs.vars.outputs.board_name }}-host"]
@@ -156,9 +162,9 @@ jobs:
       matrix:
         include:
           - type: emmc
-            script: "${{ needs.build_u_boot.outputs.emmc_test_scr }}"
+            script: "${{ needs.build_u_boot.outputs.tftp_run_dir }}/${{ needs.build_u_boot.outputs.emmc_test_scr }}"
           - type: sdcard
-            script: "${{ needs.build_u_boot.outputs.sd_test_scr }}"
+            script: "${{ needs.build_u_boot.outputs.tftp_run_dir }}/${{ needs.build_u_boot.outputs.sd_test_scr }}"
         
     steps:
       - name: Check out source code
@@ -166,3 +172,12 @@ jobs:
 
       - name: Run U-Boot test script
         run: scripts/agent.py --script '${{ matrix.script }}'
+
+  cleanup_tftp:
+    runs-on: [self-hosted, tftp-server]
+    needs: [vars, deploy_tftp, test_uboot]
+    if: ${{ always() }}
+    steps:
+      - name: Cleanup TFTP server
+        run: |
+          rm -rf '${{ needs.deploy_tftp.outputs.full_tftp_run_dir }}'
