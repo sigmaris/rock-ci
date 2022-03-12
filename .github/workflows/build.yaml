@@ -130,3 +130,13 @@ jobs:
         run: |
           source ~/board_${{ needs.vars.outputs.board_name }}.conf
           cp uboot/* ${TFTP_DIR}
+
+  write_uboot:
+    runs-on: [self-hosted, "${{ needs.vars.outputs.board_name }}-host"]
+    needs: [deploy_tftp, vars]
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v2
+
+      - name: Run U-Boot test script
+        run: scripts/agent.py

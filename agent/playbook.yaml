@@ -19,6 +19,8 @@
       user:
         name: ghaction
         group: ghaction
+        groups:
+          - tty
         home: /opt/ghaction
         create_home: true
         comment: GitHub actions runner
@@ -37,6 +39,4 @@
         runner_dir: /opt/ghaction/runner
         runner_state: "started"
         hide_sensitive_logs: false
-        runner_labels:
-          - dhcp-server
-          - tftp-server
+        runner_labels: "{{ boards|map(attribute='name')|product(['-host'])|map('join')|list + ['dhcp-server', 'tftp-server'] }}"

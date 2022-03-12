@@ -24,7 +24,10 @@ make -j$(getconf _NPROCESSORS_ONLN) CROSS_COMPILE=aarch64-linux-gnu-
 # Make images
 tools/mkimage -n rk3399 -T rksd  -d tpl/u-boot-tpl.bin:spl/u-boot-spl.bin mmc_idbloader.img
 tools/mkimage -n rk3399 -T rkspi -d tpl/u-boot-tpl.bin:spl/u-boot-spl.bin spi_idbloader.img
-tools/mkimage -A arm -T script -d "${SCRIPTPATH}/test.scr" boot.scr.uimg
+
+# Make flash script
+"${SCRIPTPATH}/gen_test_scr.py" -i mmc_idbloader.img mmc_test.scr
+tools/mkimage -A arm -T script -d mmc_test.scr boot.scr.uimg
 
 echo "::set-output name=mmc_idbloader::$(pwd)/mmc_idbloader.img"
 echo "::set-output name=spi_idbloader::$(pwd)/spi_idbloader.img"

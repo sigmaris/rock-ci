@@ -1,8 +1,11 @@
 ---
 # Sets up misc. things required for the agent to control network-booted boards
 - name: Install required apt packages
-  package:
-    name: u-boot-tools
+  apt:
+    pkg:
+      - python3-periphery
+      - python3-pexpect
+      - u-boot-tools
     state: present
 
 - name: Copy default u-boot script source
