@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+import argparse
 import io
 import logging
 import os
@@ -14,6 +16,10 @@ class SerialLogWrapper(io.TextIOWrapper):
             super().write("SERIAL: ")
             self._written_line = True
         return super().write(__s.replace("\n", "\nSERIAL: "))
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-s", "--script", default="boot.scr.uimg", help="script filename to load via TFTP")
+args = parser.parse_args()
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -46,6 +52,10 @@ with (
     print("")
     logger.info("At U-boot prompt, disable SPI and DHCP-boot")
     disable_spi_gpio.write(True)
+    p.send('setexpr dashaddr gsub : - ${ethaddr}\n')
+    p.expect("=> ")
+    p.send('setenv boot_script_dhcp "${dashaddr}/' + args.script + '"\n')
+    p.expect("=> ")
     p.send("run bootcmd_dhcp\n")
     # Test script should run:
     p.expect("SELECT_MMC")

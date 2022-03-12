@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import pathlib
+import re
 
 SCRIPT_DIR = pathlib.Path(__file__).parent
 
@@ -15,6 +16,7 @@ args = parser.parse_args()
 
 with open(SCRIPT_DIR / "test.scr.tmpl", "r") as tmpl_file:
     template = tmpl_file.read()
+
 content = template.replace(
     "%idbloader_file%", args.idbloader
 ).replace(
@@ -22,5 +24,12 @@ content = template.replace(
 ).replace(
     "%mmc_dev%", "0" if args.emmc else "1"
 )
+
+content = re.sub(
+    r"%start erase_emmc%\n(.*)%end erase_emmc%\n",
+    r"\1" if args.sdcard else "",
+    content,
+flags=re.DOTALL)
+
 with open(args.out_path, "w") as outfile:
     outfile.write(content)

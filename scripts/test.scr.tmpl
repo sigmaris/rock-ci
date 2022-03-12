@@ -1,9 +1,9 @@
-if test "%mmc_dev%" -eq "1"; then
-  echo "== ERASE_EMMC =="
-  mmc dev 0
-  mmc erase 0x40 8
-  mmc erase 0x4000 1
-fi
+%start erase_emmc%
+echo "== ERASE_EMMC =="
+mmc dev 0
+mmc erase 0x40 8
+mmc erase 0x4000 1
+%end erase_emmc%
 
 echo "== SELECT_MMC =="
 if mmc dev %mmc_dev%; then
