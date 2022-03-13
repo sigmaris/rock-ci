@@ -5,10 +5,10 @@ mmc erase 0x40 8
 mmc erase 0x4000 1
 %end erase_emmc%
 echo "== SELECT_MMC =="
-if mmc dev %mmc_dev%; then
+if mmc dev %mmc_dev%; then 
   mmc info
 else
-  echo "== CI_FAIL: can't select mmc dev %mmc_dev% =="
+  echo "== CI_FAIL: cant select mmc dev %mmc_dev%"
   sleep 1
   reset
 fi
@@ -18,7 +18,7 @@ if tftpboot ${pxefile_addr_r} ${dashaddr}/%idbloader_file%; then
   setexpr blocksize ${blocksize} + 1
   mmc write ${pxefile_addr_r} 0x40 ${blocksize}
 else
-  echo "== CI_FAIL: can't TFTP ${dashaddr}/%idbloader_file% =="
+  echo "== CI_FAIL: cant TFTP ${dashaddr}/%idbloader_file% =="
   sleep 1
   reset
 fi
@@ -28,7 +28,7 @@ if tftpboot ${pxefile_addr_r} ${dashaddr}/%u_boot_file%; then
   setexpr blocksize ${blocksize} + 1
   mmc write ${pxefile_addr_r} 0x4000 ${blocksize}
 else
-  echo "== CI_FAIL: can't TFTP ${dashaddr}/%u_boot_file% =="
+  echo "== CI_FAIL: cant TFTP ${dashaddr}/%u_boot_file% =="
   sleep 1
   reset
 fi
