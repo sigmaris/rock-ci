@@ -54,7 +54,11 @@ with (
     disable_spi_gpio.write(True)
     p.send('setexpr dashaddr gsub : - ${ethaddr}\n')
     p.expect("=> ")
-    p.send('setenv boot_script_dhcp "${dashaddr}/' + args.script + '"\n')
+    p.send('setenv boot_script_dhcp "${dashaddr}/')
+    # Wait for command echo
+    p.expect('setenv boot_script_dhcp')
+    p.send(args.script)
+    p.send('"\n')
     p.expect("=> ")
     p.send("run bootcmd_dhcp\n")
     # Test script should run:
