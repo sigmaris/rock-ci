@@ -75,8 +75,8 @@ jobs:
         with:
           key: ${{ steps.get_key.outputs.tf_a_cache_key }}
           path: |
-            "${{ github.workspace }}/work/arm-trusted-firmware/build/rk3399/debug/bl31/bl31.elf"
-            "${{ github.workspace }}/work/arm-trusted-firmware/build/rk3399/release/bl31/bl31.elf"
+            work/arm-trusted-firmware/build/rk3399/debug/bl31/bl31.elf
+            work/arm-trusted-firmware/build/rk3399/release/bl31/bl31.elf
 
       - name: Clone TF-A
         if: steps.cache.outputs.cache-hit != 'true'
@@ -113,7 +113,22 @@ jobs:
           name: bl31
           path: "${{ github.workspace }}/work"
 
+      - name: Get cache key
+        id: get_key
+        run: |
+          SOURCE_HASH="${{ hashFiles('scripts/build_uboot.sh', 'configs/ci-rockpro64-rk3399_defconfig', 'work/bl31.elf') }}"
+          UBOOT_CACHE_KEY="$(scripts/clone_uboot.sh get-cache-key)_${SOURCE_HASH}"
+          echo "::set-output name=uboot_cache_key::$UBOOT_CACHE_KEY"
+
+      - name: Cache U-Boot
+        id: cache
+        uses: actions/cache@v2
+        with:
+          key: ${{ steps.get_key.outputs.uboot_cache_key }}
+          path: work/u-boot/build
+
       - name: Clone U-Boot
+        if: steps.cache.outputs.cache-hit != 'true'
         run: scripts/clone_uboot.sh
       
       - name: Build U-Boot
