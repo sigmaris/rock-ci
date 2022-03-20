@@ -59,11 +59,27 @@ jobs:
     steps:
       - name: Check out source code
         uses: actions/checkout@v2
-      
+
       - name: Create working directory
         run: mkdir "$WORKDIR"
-      
+
+      - name: Get cache key
+        id: get_key
+        run: |
+          TF_A_CACHE_KEY="$(scripts/clone_tfa.sh get-cache-key)_$(scripts/build_tfa.sh get-cache-key)"
+          echo "::set-output name=tf_a_cache_key::$TF_A_CACHE_KEY"
+
+      - name: Cache TF-A
+        id: cache
+        uses: actions/cache@v2
+        with:
+          key: ${{ steps.get_key.outputs.tf_a_cache_key }}
+          path: |
+            "${{ github.workspace }}/work/arm-trusted-firmware/build/rk3399/debug/bl31/bl31.elf"
+            "${{ github.workspace }}/work/arm-trusted-firmware/build/rk3399/release/bl31/bl31.elf"
+
       - name: Clone TF-A
+        if: steps.cache.outputs.cache-hit != 'true'
         run: scripts/clone_tfa.sh
       
       - name: Build TF-A
