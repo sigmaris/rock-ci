@@ -24,6 +24,14 @@ on:
         description: U-Boot Git ref to use
         type: string
         required: false
+      linux_repo:
+        description: Linux Git repository to use
+        type: string
+        required: false
+      linux_ref:
+        description: Linux Git ref to use
+        type: string
+        required: false
 
 jobs:
   vars:
@@ -34,6 +42,8 @@ jobs:
       TF_A_REF_WD: "${{ github.event.inputs.tf_a_ref }}"
       U_BOOT_REPO_WD: "${{ github.event.inputs.u_boot_repo }}"
       U_BOOT_REF_WD: "${{ github.event.inputs.u_boot_ref }}"
+      LINUX_REPO_WD: "${{ github.event.inputs.linux_repo }}"
+      LINUX_REF_WD: "${{ github.event.inputs.linux_ref }}"
     steps:
       - name: Check out source code
         uses: actions/checkout@v2
@@ -47,6 +57,8 @@ jobs:
       tf_a_ref: ${{ steps.resolve_vars.outputs.tf_a_ref }}
       u_boot_repo: ${{ steps.resolve_vars.outputs.u_boot_repo }}
       u_boot_ref: ${{ steps.resolve_vars.outputs.u_boot_ref }}
+      linux_repo: ${{ steps.resolve_vars.outputs.linux_repo }}
+      linux_ref: ${{ steps.resolve_vars.outputs.linux_ref }}
 
   build_tf_a:
     runs-on: ubuntu-20.04
@@ -185,6 +197,51 @@ jobs:
     outputs:
       emmc_test_scr: ${{ steps.build_scripts.outputs.emmc_test_scr }}
       sd_test_scr: ${{ steps.build_scripts.outputs.sd_test_scr }}
+
+  build_linux:
+    runs-on: ubuntu-20.04
+    container: sigmaris/aarch64-linux-crossbuilder:latest
+    env:
+      WORKDIR: "${{ github.workspace }}/work"
+      LINUX_REPO: ${{ needs.vars.outputs.linux_repo }}
+      LINUX_REF: ${{ needs.vars.outputs.linux_ref }}
+    needs: vars
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v2
+
+      - name: Create working directory
+        run: mkdir "$WORKDIR"
+
+      - name: Get cache key
+        id: get_key
+        run: |
+          SOURCE_HASH="${{ hashFiles('scripts/build_linux.sh', 'configs/rockpro64_linux_defconfig') }}"
+          LINUX_CACHE_KEY="$(scripts/clone_linux.sh get-cache-key)_${SOURCE_HASH}"
+          echo "::set-output name=linux_cache_key::$LINUX_CACHE_KEY"
+
+      - name: Cache Linux
+        id: cache
+        uses: actions/cache@v2
+        with:
+          key: ${{ steps.get_key.outputs.linux_cache_key }}
+          path: work/linux-*.deb
+
+      - name: Clone Linux
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: scripts/clone_linux.sh
+      
+      - name: Build Linux
+        id: build_linux
+        run: scripts/build_linux.sh
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: linuxdebs
+          path: work/linux-*.deb
+    outputs:
+      linux_image_deb: ${{ steps.build_linux.outputs.linux_image_deb }}
 
   deploy_tftp:
     runs-on: [self-hosted, tftp-server]
