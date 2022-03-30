@@ -32,6 +32,10 @@ on:
         description: Linux Git ref to use
         type: string
         required: false
+      debian_image:
+        description: Debian rootfs image URL to use
+        type: string
+        required: false
 
 jobs:
   vars:
@@ -44,6 +48,7 @@ jobs:
       U_BOOT_REF_WD: "${{ github.event.inputs.u_boot_ref }}"
       LINUX_REPO_WD: "${{ github.event.inputs.linux_repo }}"
       LINUX_REF_WD: "${{ github.event.inputs.linux_ref }}"
+      DEBIAN_IMAGE_WD: "${{ github.event.inputs.debian_image }}"
     steps:
       - name: Check out source code
         uses: actions/checkout@v2
@@ -59,6 +64,7 @@ jobs:
       u_boot_ref: ${{ steps.resolve_vars.outputs.u_boot_ref }}
       linux_repo: ${{ steps.resolve_vars.outputs.linux_repo }}
       linux_ref: ${{ steps.resolve_vars.outputs.linux_ref }}
+      debian_image: ${{ steps.resolve_vars.outputs.debian_image }}
 
   build_tf_a:
     runs-on: ubuntu-20.04
@@ -242,6 +248,36 @@ jobs:
           path: work/linux-*.deb
     outputs:
       linux_image_deb: ${{ steps.build_linux.outputs.linux_image_deb }}
+      kdeb_pkgversion: ${{ steps.build_linux.outputs.kdeb_pkgversion }}
+
+  prepare_image:
+    runs-on: ubuntu-20.04
+    needs: [build_linux, vars]
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v2
+
+      - name: Install required packages
+        run: >
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
+          binfmt-support qemu-utils qemu-user-static systemd-container
+
+      - name: Download Linux packages
+        uses: actions/download-artifact@v2
+        with:
+          name: linuxdebs
+          path: linuxdebs
+
+      - name: Download Debian image
+        run: curl --location --output debian.qcow2 '${{ needs.vars.outputs.debian_image }}'
+
+      - name: Overlay kernel on Debian image and extract kernel and built initramfs
+        run: >
+          mkdir bootfiles &&
+          scripts/overlay_kernel_image.sh debian.qcow2
+            'linuxdebs/${{ needs.build_linux.outputs.linux_image_deb }}'
+            '${{ needs.build_linux.outputs.kdeb_pkgversion }}'
+            bootfiles
 
   deploy_tftp:
     runs-on: [self-hosted, tftp-server]

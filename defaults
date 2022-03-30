@@ -8,4 +8,6 @@ DEF_U_BOOT_REF="v2022.01"
 DEF_LINUX_REPO="https://github.com/torvalds/linux.git"
 DEF_LINUX_REF="v5.17"
 
+DEF_DEBIAN_IMAGE="https://cloud.debian.org/images/cloud/bullseye/20220310-944/debian-11-generic-arm64-20220310-944.qcow2"
+
 DEF_BOARD_NAME="rockpro1"

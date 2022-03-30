@@ -11,7 +11,8 @@ then
     # Use cached build
     cd "$WORKDIR"
     LINUX_IMAGE_DEB="$(find . -type f -name "linux-image-*_${ARCH}.deb" -not -name 'linux-image-*-dbg_*_${ARCH}.deb' | head -n 1)"
-    echo "::set-output name=linux_image_deb::${LINUX_IMAGE_DEB}"
+    VERSION_PART="${LINUX_IMAGE_DEB#linux-image-}"
+    KDEB_PKGVERSION="${VERSION_PART%_*_${ARCH}.deb}"
 else
     # Build Linux
     cd "${WORKDIR}/linux"
@@ -23,5 +24,7 @@ else
     make -j$(getconf _NPROCESSORS_ONLN) bindeb-pkg
     LINUX_IMAGE_DEB="linux-image-${KDEB_PKGVERSION}_${KDEB_PKGVERSION}_${ARCH}.deb"
     test -f "../${LINUX_IMAGE_DEB}"
-    echo "::set-output name=linux_image_deb::${LINUX_IMAGE_DEB}"
 fi
+
+echo "::set-output name=linux_image_deb::${LINUX_IMAGE_DEB}"
+echo "::set-output name=kdeb_pkgversion::${KDEB_PKGVERSION}"
