@@ -12,7 +12,7 @@ if compgen -G "linux-image-*_${ARCH}.deb" > /dev/null && [[ -z "${NO_BUILD_CACHE
 then
     # Use cached build
     LINUX_IMAGE_DEB="$(find . -type f -name "linux-image-*_${ARCH}.deb" -not -name 'linux-image-*-dbg_*_${ARCH}.deb' | head -n 1)"
-    VERSION_PART="${LINUX_IMAGE_DEB#linux-image-}"
+    VERSION_PART="${LINUX_IMAGE_DEB#./linux-image-}"
     KDEB_PKGVERSION="${VERSION_PART%_*_${ARCH}.deb}"
 else
     # Build Linux
