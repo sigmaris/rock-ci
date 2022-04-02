@@ -331,7 +331,7 @@ jobs:
         run: >
           sudo apt-get -y update &&
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
-            binfmt-support qemu-utils qemu-user-static systemd-container
+          binfmt-support qemu-utils qemu-user-static systemd-container
 
       - name: Download Linux packages
         uses: actions/download-artifact@v2
