@@ -32,8 +32,8 @@ on:
         description: Linux Git ref to use
         type: string
         required: false
-      debian_image:
-        description: Debian rootfs image URL to use
+      deb_image_ver:
+        description: Debian rootfs image version to use
         type: string
         required: false
 
@@ -48,7 +48,7 @@ jobs:
       U_BOOT_REF_WD: "${{ github.event.inputs.u_boot_ref }}"
       LINUX_REPO_WD: "${{ github.event.inputs.linux_repo }}"
       LINUX_REF_WD: "${{ github.event.inputs.linux_ref }}"
-      DEBIAN_IMAGE_WD: "${{ github.event.inputs.debian_image }}"
+      DEB_IMAGE_VER_WD: "${{ github.event.inputs.deb_image_ver }}"
     steps:
       - name: Check out source code
         uses: actions/checkout@v2
@@ -64,7 +64,7 @@ jobs:
       u_boot_ref: ${{ steps.resolve_vars.outputs.u_boot_ref }}
       linux_repo: ${{ steps.resolve_vars.outputs.linux_repo }}
       linux_ref: ${{ steps.resolve_vars.outputs.linux_ref }}
-      debian_image: ${{ steps.resolve_vars.outputs.debian_image }}
+      deb_image_ver: ${{ steps.resolve_vars.outputs.deb_image_ver }}
 
   build_tf_a:
     runs-on: ubuntu-20.04
@@ -89,7 +89,7 @@ jobs:
 
       - name: Cache TF-A
         id: cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: ${{ steps.get_key.outputs.tf_a_cache_key }}
           path: |
@@ -105,7 +105,7 @@ jobs:
         run: scripts/build_tfa.sh
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: bl31
           path: ${{ steps.build_tfa.outputs.bl31 }}
@@ -140,7 +140,7 @@ jobs:
 
       - name: Cache U-Boot
         id: cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: ${{ steps.get_key.outputs.uboot_cache_key }}
           path: work/u-boot/build
@@ -157,7 +157,7 @@ jobs:
         run: scripts/build_uboot.sh
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: uboot
           path: |
@@ -194,7 +194,7 @@ jobs:
         run: scripts/build_test_scripts.sh
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: testscripts
           path: |
@@ -204,9 +204,8 @@ jobs:
       emmc_test_scr: ${{ steps.build_scripts.outputs.emmc_test_scr }}
       sd_test_scr: ${{ steps.build_scripts.outputs.sd_test_scr }}
 
-  build_linux:
+  cached_debian_image:
     runs-on: ubuntu-20.04
-    container: sigmaris/aarch64-linux-crossbuilder:latest
     env:
       WORKDIR: "${{ github.workspace }}/work"
       LINUX_REPO: ${{ needs.vars.outputs.linux_repo }}
@@ -223,12 +222,73 @@ jobs:
         id: get_key
         run: |
           SOURCE_HASH="${{ hashFiles('scripts/build_linux.sh', 'configs/rockpro64_linux_defconfig') }}"
+          IMAGE_CACHE_KEY="$( (scripts/clone_linux.sh get-cache-key; printf '%s %s' "$SOURCE_HASH" '${{ needs.vars.outputs.deb_image_ver }}') | sha256sum | cut -d ' ' -f 1)"
+          echo "::set-output name=image_cache_key::$IMAGE_CACHE_KEY"
+
+      - name: Try retrieving cached image layer
+        id: cache
+        uses: actions/cache@v3
+        with:
+          # Use a always-unique key to ensure primary key is never hit and so saved cache from this step is never used
+          key: ${{ github.workflow }}_${{ github.run_id }}_${{ github.run_attempt }}
+          restore-keys: ${{ steps.get_key.outputs.image_cache_key }}
+          path: |
+            debian-11-generic-arm64-${{ needs.vars.outputs.deb_image_ver }}.qcow2.snapshot
+            bootfiles/*
+      
+      - name: Check if cache is valid
+        id: check_cache
+        run: |
+          for expected in debian-11-generic-arm64-${{ needs.vars.outputs.deb_image_ver }}.qcow2.snapshot \
+            bootfiles/vmlinuz-* bootfiles/initrd.img-* bootfiles/rk3399-rockpro64.dtb
+          do
+            if [[ ! -f "$expected" ]]
+            then
+              echo "::set-output name=is_valid::false"
+              exit 0
+            fi
+          done
+          echo "::set-output name=is_valid::true"
+
+      - name: Upload cached image layer and bootfiles
+        if: steps.check_cache.outputs.is_valid == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: imagefiles
+          path: |
+            debian-11-generic-arm64-${{ needs.vars.outputs.deb_image_ver }}.qcow2.snapshot
+            bootfiles/*
+
+    outputs:
+      image_cache_key: ${{ steps.get_key.outputs.image_cache_key }}
+      cache_is_valid: ${{ steps.check_cache.outputs.is_valid }}
+
+  build_linux:
+    runs-on: ubuntu-20.04
+    container: sigmaris/aarch64-linux-crossbuilder:latest
+    env:
+      WORKDIR: "${{ github.workspace }}/work"
+      LINUX_REPO: ${{ needs.vars.outputs.linux_repo }}
+      LINUX_REF: ${{ needs.vars.outputs.linux_ref }}
+    needs: [cached_debian_image, vars]
+    if: needs.cached_debian_image.outputs.cache_is_valid != 'true'
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v2
+
+      - name: Create working directory
+        run: mkdir "$WORKDIR"
+
+      - name: Get cache key
+        id: get_key
+        run: |
+          SOURCE_HASH="${{ hashFiles('scripts/build_linux.sh', 'configs/rockpro64_linux_defconfig') }}"
           LINUX_CACHE_KEY="$(scripts/clone_linux.sh get-cache-key)_${SOURCE_HASH}"
           echo "::set-output name=linux_cache_key::$LINUX_CACHE_KEY"
 
       - name: Cache Linux
         id: cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: ${{ steps.get_key.outputs.linux_cache_key }}
           path: work/linux-*.deb
@@ -242,7 +302,7 @@ jobs:
         run: scripts/build_linux.sh
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: linuxdebs
           path: work/linux-*.deb
@@ -252,15 +312,26 @@ jobs:
 
   prepare_image:
     runs-on: ubuntu-20.04
-    needs: [build_linux, vars]
+    needs: [cached_debian_image, build_linux, vars]
+    if: needs.cached_debian_image.outputs.cache_is_valid != 'true'
     steps:
       - name: Check out source code
         uses: actions/checkout@v2
 
+      - name: Cache image layer and bootfiles
+        id: cache
+        uses: actions/cache@v3
+        with:
+          key: ${{ needs.cached_debian_image.outputs.image_cache_key }}
+          path: |
+            debian-11-generic-arm64-${{ needs.vars.outputs.deb_image_ver }}.qcow2.snapshot
+            bootfiles/*
+
       - name: Install required packages
         run: >
+          sudo apt-get -y update &&
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
-          binfmt-support qemu-utils qemu-user-static systemd-container
+            binfmt-support qemu-utils qemu-user-static systemd-container
 
       - name: Download Linux packages
         uses: actions/download-artifact@v2
@@ -269,15 +340,29 @@ jobs:
           path: linuxdebs
 
       - name: Download Debian image
-        run: curl --location --output debian.qcow2 '${{ needs.vars.outputs.debian_image }}'
+        env:
+          IMG_VER: "${{ needs.vars.outputs.deb_image_ver }}"
+        run: >
+          curl --location --output debian-11-generic-arm64-${IMG_VER}.qcow2
+            "https://cloud.debian.org/images/cloud/bullseye/${IMG_VER}/debian-11-generic-arm64-${IMG_VER}.qcow2"
 
       - name: Overlay kernel on Debian image and extract kernel and built initramfs
+        env:
+          IMG_VER: "${{ needs.vars.outputs.deb_image_ver }}"
         run: >
           mkdir bootfiles &&
-          scripts/overlay_kernel_image.sh debian.qcow2
+          scripts/overlay_kernel_image.sh debian-11-generic-arm64-${IMG_VER}.qcow2
             'linuxdebs/${{ needs.build_linux.outputs.linux_image_deb }}'
             '${{ needs.build_linux.outputs.kdeb_pkgversion }}'
             bootfiles
+
+      - name: Upload cached image layer and bootfiles
+        uses: actions/upload-artifact@v3
+        with:
+          name: imagefiles
+          path: |
+            debian-11-generic-arm64-${{ needs.vars.outputs.deb_image_ver }}.qcow2.snapshot
+            bootfiles/*
 
   deploy_tftp:
     runs-on: [self-hosted, tftp-server]
