@@ -16,10 +16,11 @@ popd
 sudo modprobe nbd
 
 sudo qemu-nbd --connect /dev/nbd1 "${BASE_IMAGE}.snapshot"
-sudo mkdir /mnt/target_image
+sudo mkdir -p /mnt/target_image
+sudo /sbin/partprobe /dev/nbd1
 sudo mount /dev/nbd1p1 /mnt/target_image
-sudo systemd-nspawn --bind-ro "${LINUX_IMAGE_DEB}:/${LINUX_IMAGE_BASENAME}" -D /mnt/target_image apt-get install -y "/${LINUX_IMAGE_BASENAME}"
-cp "/mnt/target_image/boot/vmlinuz-${KDEB_PKGVERSION}" "/mnt/target_image/boot/initrd.img-${KDEB_PKGVERSION}" "$OUT_DIR"
+sudo systemd-nspawn --bind-ro "$(realpath "$LINUX_IMAGE_DEB"):/${LINUX_IMAGE_BASENAME}" -D /mnt/target_image apt-get install -y "/${LINUX_IMAGE_BASENAME}"
+cp "/mnt/target_image/boot/vmlinuz-${KDEB_PKGVERSION}" "/mnt/target_image/boot/initrd.img-${KDEB_PKGVERSION}" "/mnt/target_image/usr/lib/linux-image-${KDEB_PKGVERSION}/rockchip/rk3399-rockpro64.dtb" "$OUT_DIR"
 
 sudo umount /mnt/target_image
 sudo qemu-nbd --disconnect /dev/nbd1
