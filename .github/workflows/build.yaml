@@ -221,7 +221,7 @@ jobs:
       - name: Get cache key
         id: get_key
         run: |
-          SOURCE_HASH="${{ hashFiles('scripts/build_linux.sh', 'configs/rockpro64_linux_defconfig') }}"
+          SOURCE_HASH="${{ hashFiles('scripts/build_linux.sh', 'scripts/overlay_kernel_image.sh', 'configs/rockpro64_linux_defconfig') }}"
           IMAGE_CACHE_KEY="$( (scripts/clone_linux.sh get-cache-key; printf '%s %s' "$SOURCE_HASH" '${{ needs.vars.outputs.deb_image_ver }}') | sha256sum | cut -d ' ' -f 1)"
           echo "::set-output name=image_cache_key::$IMAGE_CACHE_KEY"
 
@@ -331,7 +331,7 @@ jobs:
         run: >
           sudo apt-get -y update &&
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
-          binfmt-support qemu-utils qemu-user-static systemd-container
+          binfmt-support parted qemu-utils qemu-user-static systemd-container
 
       - name: Download Linux packages
         uses: actions/download-artifact@v2
