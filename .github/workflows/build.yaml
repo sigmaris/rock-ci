@@ -344,7 +344,7 @@ jobs:
           IMG_VER: "${{ needs.vars.outputs.deb_image_ver }}"
         run: >
           curl --location --output debian-11-generic-arm64-${IMG_VER}.qcow2
-            "https://cloud.debian.org/images/cloud/bullseye/${IMG_VER}/debian-11-generic-arm64-${IMG_VER}.qcow2"
+          "https://cloud.debian.org/images/cloud/bullseye/${IMG_VER}/debian-11-generic-arm64-${IMG_VER}.qcow2"
 
       - name: Overlay kernel on Debian image and extract kernel and built initramfs
         env:
