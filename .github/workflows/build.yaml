@@ -352,9 +352,9 @@ jobs:
         run: >
           mkdir bootfiles &&
           scripts/overlay_kernel_image.sh debian-11-generic-arm64-${IMG_VER}.qcow2
-            'linuxdebs/${{ needs.build_linux.outputs.linux_image_deb }}'
-            '${{ needs.build_linux.outputs.kdeb_pkgversion }}'
-            bootfiles
+          'linuxdebs/${{ needs.build_linux.outputs.linux_image_deb }}'
+          '${{ needs.build_linux.outputs.kdeb_pkgversion }}'
+          bootfiles
 
       - name: Upload cached image layer and bootfiles
         uses: actions/upload-artifact@v3
