@@ -19,7 +19,9 @@ sudo qemu-nbd --connect /dev/nbd1 "${BASE_IMAGE}.snapshot"
 sudo mkdir -p /mnt/target_image
 sudo /sbin/partprobe /dev/nbd1
 sudo mount /dev/nbd1p1 /mnt/target_image
-sudo systemd-nspawn --bind-ro "$(realpath "$LINUX_IMAGE_DEB"):/${LINUX_IMAGE_BASENAME}" -D /mnt/target_image /bin/sh -c "apt-get update && apt-get install -y nbd-client /${LINUX_IMAGE_BASENAME}"
+sudo mv /mnt/target_image/etc/resolv.conf /mnt/target_image/etc/resolv.conf.bak
+sudo systemd-nspawn --resolv-conf=bind-host --bind-ro "$(realpath "$LINUX_IMAGE_DEB"):/${LINUX_IMAGE_BASENAME}" -D /mnt/target_image /bin/sh -c "apt-get update && apt-get install -y nbd-client /${LINUX_IMAGE_BASENAME}"
+sudo mv -f /mnt/target_image/etc/resolv.conf.bak /mnt/target_image/etc/resolv.conf
 cp "/mnt/target_image/boot/vmlinuz-${KDEB_PKGVERSION}" "/mnt/target_image/boot/initrd.img-${KDEB_PKGVERSION}" "/mnt/target_image/usr/lib/linux-image-${KDEB_PKGVERSION}/rockchip/rk3399-rockpro64.dtb" "$OUT_DIR"
 
 sudo umount /mnt/target_image
