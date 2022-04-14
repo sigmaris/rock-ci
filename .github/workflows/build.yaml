@@ -250,14 +250,19 @@ jobs:
           done
           echo "::set-output name=is_valid::true"
 
-      - name: Upload cached image layer and bootfiles
+      - name: Upload cached image layer
         if: steps.check_cache.outputs.is_valid == 'true'
         uses: actions/upload-artifact@v3
         with:
-          name: imagefiles
-          path: |
-            debian-11-generic-arm64-${{ needs.vars.outputs.deb_image_ver }}.qcow2.snapshot
-            bootfiles/*
+          name: imagelayer
+          path: debian-11-generic-arm64-${{ needs.vars.outputs.deb_image_ver }}.qcow2.snapshot
+
+      - name: Upload cached bootfiles
+        if: steps.check_cache.outputs.is_valid == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: bootfiles
+          path: bootfiles/*
 
     outputs:
       image_cache_key: ${{ steps.get_key.outputs.image_cache_key }}
@@ -356,13 +361,17 @@ jobs:
           '${{ needs.build_linux.outputs.kdeb_pkgversion }}'
           bootfiles
 
-      - name: Upload cached image layer and bootfiles
+      - name: Upload image layer
         uses: actions/upload-artifact@v3
         with:
-          name: imagefiles
-          path: |
-            debian-11-generic-arm64-${{ needs.vars.outputs.deb_image_ver }}.qcow2.snapshot
-            bootfiles/*
+          name: imagelayer
+          path: debian-11-generic-arm64-${{ needs.vars.outputs.deb_image_ver }}.qcow2.snapshot
+
+      - name: Upload bootfiles
+        uses: actions/upload-artifact@v3
+        with:
+          name: bootfiles
+          path: bootfiles/*
 
   deploy_tftp:
     runs-on: [self-hosted, tftp-server]
@@ -380,7 +389,13 @@ jobs:
           name: testscripts
           path: testscripts
 
-      - name: Deploy u-boot binaries to TFTP server
+      - name: Download boot files
+        uses: actions/download-artifact@v2
+        with:
+          name: bootfiles
+          path: bootfiles
+
+      - name: Deploy binaries to TFTP server
         id: deploy
         run: |
           source ~/board_${{ needs.vars.outputs.board_name }}.conf
@@ -399,6 +414,9 @@ jobs:
           do
             cp "testscripts/${test_script}" "${TFTP_RUN_DIR}/${test_script}"
           done
+          cp bootfiles/initrd.img-* "${TFTP_RUN_DIR}/initrd.img"
+          cp bootfiles/vmlinuz-* "${TFTP_RUN_DIR}/vmlinuz"
+          cp bootfiles/rk3399-rockpro64.dtb "${TFTP_RUN_DIR}/rk3399-rockpro64.dtb"
           echo "::set-output name=full_tftp_run_dir::$TFTP_RUN_DIR"
     outputs:
       full_tftp_run_dir: ${{ steps.deploy.outputs.full_tftp_run_dir }}
