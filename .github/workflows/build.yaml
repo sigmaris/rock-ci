@@ -375,7 +375,7 @@ jobs:
 
   deploy_tftp:
     runs-on: [self-hosted, tftp-server]
-    needs: [build_u_boot, build_test_scripts, vars]
+    needs: [build_u_boot, build_test_scripts, cached_debian_image, prepare_image, vars]
     steps:
       - name: Download u-boot binaries
         uses: actions/download-artifact@v2
