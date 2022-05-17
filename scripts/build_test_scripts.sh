@@ -8,9 +8,12 @@ cd "$WORKDIR"
 # Make flash scripts
 "${SCRIPTPATH}/gen_test_scr.py" -i "${TFTP_RUN_DIR}/mmc_idbloader.img" -u "${TFTP_RUN_DIR}/u-boot.itb" --emmc emmc_test.scr
 "${SCRIPTPATH}/gen_test_scr.py" -i "${TFTP_RUN_DIR}/mmc_idbloader.img" -u "${TFTP_RUN_DIR}/u-boot.itb" --sdcard sd_test.scr
+sed -e "s#%tftp_run_dir%#${TFTP_RUN_DIR}#g" < "${SCRIPTPATH}/bootlinux.scr" > bootlinux.scr
 mkimage -A arm -T script -d emmc_test.scr emmc_test.scr.uimg
 mkimage -A arm -T script -d sd_test.scr sd_test.scr.uimg
+mkimage -A arm -T script -d bootlinux.scr bootlinux.scr.uimg
 
 echo "::set-output name=artifact_dir::$(pwd)"
 echo "::set-output name=emmc_test_scr::emmc_test.scr.uimg"
 echo "::set-output name=sd_test_scr::sd_test.scr.uimg"
+echo "::set-output name=bootlinux_scr::bootlinux.scr.uimg"

@@ -1,0 +1,6 @@
+# Script to boot linux - requires nbdserver variable pre-set
+tftpboot ${fdt_addr_r} %tftp_run_dir%/rk3399-rockpro64.dtb
+tftpboot ${kernel_addr_r} %tftp_run_dir%/vmlinuz
+tftpboot ${ramdisk_addr_r} %tftp_run_dir%/initrd.img
+setenv bootargs ip=dhcp root=/dev/nbd0p1 nbdroot=${nbdserver},debian,nbd0 network-config=disabled ds=nocloud-net\;s=http://${nbdserver}:8000/ earlycon=uart8250,mmio32,0xff1a0000 console=ttyS2,1500000n8 ro panic=10 cgroup_enable=cpuset swapaccount=1
+booti ${kernel_addr_r} ${ramdisk_addr_r}:${filesize} ${fdt_addr_r}

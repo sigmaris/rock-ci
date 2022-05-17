@@ -203,6 +203,7 @@ jobs:
     outputs:
       emmc_test_scr: ${{ steps.build_scripts.outputs.emmc_test_scr }}
       sd_test_scr: ${{ steps.build_scripts.outputs.sd_test_scr }}
+      bootlinux_scr: ${{ steps.build_scripts.outputs.bootlinux_scr }}
 
   cached_debian_image:
     runs-on: ubuntu-20.04
@@ -410,7 +411,8 @@ jobs:
           done
           for test_script in \
             '${{ needs.build_test_scripts.outputs.emmc_test_scr }}' \
-            '${{ needs.build_test_scripts.outputs.sd_test_scr }}'
+            '${{ needs.build_test_scripts.outputs.sd_test_scr }}' \
+            '${{ needs.build_test_scripts.outputs.bootlinux_scr }}'
           do
             cp "testscripts/${test_script}" "${TFTP_RUN_DIR}/${test_script}"
           done
