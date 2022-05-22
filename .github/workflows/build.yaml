@@ -164,8 +164,6 @@ jobs:
             ${{ steps.build_uboot.outputs.artifact_dir }}/${{ steps.build_uboot.outputs.mmc_idbloader }}
             ${{ steps.build_uboot.outputs.artifact_dir }}/${{ steps.build_uboot.outputs.spi_idbloader }}
             ${{ steps.build_uboot.outputs.artifact_dir }}/${{ steps.build_uboot.outputs.itb }}
-            ${{ steps.build_uboot.outputs.artifact_dir }}/${{ steps.build_uboot.outputs.emmc_test_scr }}
-            ${{ steps.build_uboot.outputs.artifact_dir }}/${{ steps.build_uboot.outputs.sd_test_scr }}
     outputs:
       mmc_idbloader: ${{ steps.build_uboot.outputs.mmc_idbloader }}
       spi_idbloader: ${{ steps.build_uboot.outputs.spi_idbloader }}
@@ -200,6 +198,7 @@ jobs:
           path: |
             ${{ steps.build_scripts.outputs.artifact_dir }}/${{ steps.build_scripts.outputs.emmc_test_scr }}
             ${{ steps.build_scripts.outputs.artifact_dir }}/${{ steps.build_scripts.outputs.sd_test_scr }}
+            ${{ steps.build_scripts.outputs.artifact_dir }}/${{ steps.build_scripts.outputs.bootlinux_scr }}
     outputs:
       emmc_test_scr: ${{ steps.build_scripts.outputs.emmc_test_scr }}
       sd_test_scr: ${{ steps.build_scripts.outputs.sd_test_scr }}
