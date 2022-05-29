@@ -420,6 +420,7 @@ jobs:
           cp bootfiles/rk3399-rockpro64.dtb "${TFTP_RUN_DIR}/rk3399-rockpro64.dtb"
           echo "::set-output name=full_tftp_run_dir::$TFTP_RUN_DIR"
     outputs:
+      # The full /srv/tftp/${dashaddr}/${{ github.run_id }} directory
       full_tftp_run_dir: ${{ steps.deploy.outputs.full_tftp_run_dir }}
 
   test_uboot:
@@ -439,7 +440,46 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Run U-Boot test script
-        run: scripts/agent.py --script '${{ matrix.script }}'
+        run: scripts/agent.py u-boot --script '${{ matrix.script }}'
+
+  test_kernel:
+    runs-on: [self-hosted, "${{ needs.vars.outputs.board_name }}-host"]
+    needs: [build_u_boot, prepare_image, deploy_tftp, vars]
+    concurrency: "board-${{ needs.vars.outputs.board_name }}"
+
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v2
+
+      - name: Prepare working directory
+        id: prepare
+        env:
+          IMG_VER: "${{ needs.vars.outputs.deb_image_ver }}"
+        run: |
+          if [ ! -f "${HOME}/base_images/debian-11-generic-arm64-${IMG_VER}.qcow2" ]
+          then
+            curl --location --output "${HOME}/base_images/debian-11-generic-arm64-${IMG_VER}.qcow2" \
+              "https://cloud.debian.org/images/cloud/bullseye/${IMG_VER}/debian-11-generic-arm64-${IMG_VER}.qcow2"
+          fi
+          rm -rf "work-${{ github.run_id }}"
+          mkdir "work-${{ github.run_id }}"
+          echo "::set-output name=work_dir::work-${{ github.run_id }}"
+          cd "work-${{ github.run_id }}"
+          ln -s "${HOME}/base_images/debian-11-generic-arm64-${IMG_VER}.qcow2"
+
+      - name: Download image layer
+        uses: actions/download-artifact@v2
+        with:
+          name: imagelayer
+          path: "${{ steps.prepare.outputs.work_dir }}"
+
+      - name: Run Linux test
+        env:
+          IMG_VER: "${{ needs.vars.outputs.deb_image_ver }}"
+        run: |
+          source ~/board_${{ needs.vars.outputs.board_name }}.conf
+          cd "${{ steps.prepare.outputs.work_dir }}"
+          ../scripts/agent.py linux "$IP_ADDR" "${{ needs.build_u_boot.outputs.tftp_run_dir }}" "debian-11-generic-arm64-${{ needs.vars.outputs.deb_image_ver }}.qcow2.snapshot"
 
   cleanup_tftp:
     runs-on: [self-hosted, tftp-server]

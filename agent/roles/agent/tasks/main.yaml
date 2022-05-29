@@ -50,3 +50,11 @@
   loop: "{{ boards }}"
   loop_control:
     loop_var: board
+
+- name: Create directory for base Debian images
+  file:
+    path: /opt/ghaction/base_images
+    state: directory
+    owner: "{{ ghaction_user }}"
+    group: "{{ ghaction_group }}"
+    mode: "u=rwx,g=rx,o=rx"

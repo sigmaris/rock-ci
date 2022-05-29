@@ -31,6 +31,7 @@
     - include_role:
         name: agent
       vars:
+        ghaction_user: ghaction
         ghaction_group: ghaction
 
     - include_role:
