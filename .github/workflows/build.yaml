@@ -275,7 +275,7 @@ jobs:
       WORKDIR: "${{ github.workspace }}/work"
       LINUX_REPO: ${{ needs.vars.outputs.linux_repo }}
       LINUX_REF: ${{ needs.vars.outputs.linux_ref }}
-    needs: [cached_debian_image, vars]
+    needs: [vars, cached_debian_image]
     if: needs.cached_debian_image.outputs.cache_is_valid != 'true'
     steps:
       - name: Check out source code
@@ -317,7 +317,7 @@ jobs:
 
   prepare_image:
     runs-on: ubuntu-20.04
-    needs: [cached_debian_image, build_linux, vars]
+    needs: [vars, cached_debian_image, build_linux]
     if: needs.cached_debian_image.outputs.cache_is_valid != 'true'
     steps:
       - name: Check out source code
@@ -375,7 +375,14 @@ jobs:
 
   deploy_tftp:
     runs-on: [self-hosted, tftp-server]
-    needs: [build_u_boot, build_test_scripts, cached_debian_image, prepare_image, vars]
+    needs: [vars, build_u_boot, build_test_scripts, cached_debian_image, prepare_image]
+    if: |
+      always()
+      && needs.vars.result == 'success'
+      && needs.build_u_boot.result == 'success'
+      && needs.build_test_scripts.result == 'success'
+      && needs.cached_debian_image.result == 'success'
+      && (needs.prepare_image.result == 'success' || needs.prepare_image.result == 'skipped')
     steps:
       - name: Download u-boot binaries
         uses: actions/download-artifact@v2
@@ -425,7 +432,7 @@ jobs:
 
   test_uboot:
     runs-on: [self-hosted, "${{ needs.vars.outputs.board_name }}-host"]
-    needs: [build_u_boot, build_test_scripts, deploy_tftp, vars]
+    needs: [vars, build_u_boot, build_test_scripts, deploy_tftp]
     concurrency: "board-${{ needs.vars.outputs.board_name }}"
     strategy:
       matrix:
@@ -444,7 +451,13 @@ jobs:
 
   test_kernel:
     runs-on: [self-hosted, "${{ needs.vars.outputs.board_name }}-host"]
-    needs: [build_u_boot, prepare_image, deploy_tftp, vars]
+    needs: [vars, build_u_boot, prepare_image, deploy_tftp]
+    if: |
+      always()
+      && needs.vars.result == 'success'
+      && needs.build_u_boot.result == 'success'
+      && needs.deploy_tftp.result == 'success'
+      && (needs.prepare_image.result == 'success' || needs.prepare_image.result == 'skipped')
     concurrency: "board-${{ needs.vars.outputs.board_name }}"
 
     steps:
