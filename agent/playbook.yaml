@@ -20,6 +20,7 @@
         name: ghaction
         group: ghaction
         groups:
+          - dialout
           - gpio
           - tty
         home: /opt/ghaction

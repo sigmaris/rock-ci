@@ -496,7 +496,7 @@ jobs:
 
   cleanup_tftp:
     runs-on: [self-hosted, tftp-server]
-    needs: [vars, deploy_tftp, test_uboot]
+    needs: [vars, deploy_tftp, test_uboot, test_kernel]
     if: ${{ always() }}
     steps:
       - name: Cleanup TFTP server
