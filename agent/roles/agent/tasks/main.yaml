@@ -3,6 +3,7 @@
 - name: Install required apt packages
   apt:
     pkg:
+      - apt-cacher-ng
       - python3-periphery
       - python3-pexpect
       - qemu-utils

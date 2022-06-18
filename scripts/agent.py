@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import base64
-from contextlib import contextmanager
-from curses import meta
-from socket import timeout
 import subprocess
 import io
 import http.server
@@ -15,15 +12,15 @@ import tempfile
 import textwrap
 import threading
 import time
-from paramiko import DSSKey, Ed25519Key, PKey, RSAKey
+from paramiko import DSSKey, Ed25519Key, RSAKey
 
 from paramiko.client import SSHClient
-from paramiko.pkey import PublicBlob
 from paramiko.ecdsakey import ECDSAKey
 from pexpect import fdpexpect
 from periphery import GPIO, Serial
 
 ROCKCHIP_BAUD_RATE = 1500000
+TESTS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../tests"))
 
 class SerialLogWrapper(io.TextIOWrapper):
     
@@ -82,7 +79,7 @@ class CloudInitHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG, format='%(levelname)-10s %(name)-23s %(message)s')
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--serialport", default="/dev/serial0", help="serial port for board console")
     parser.add_argument("-c", "--gpio-chip", default="/dev/gpiochip0", help="GPIO chip device")
@@ -178,11 +175,12 @@ def test_linux(ser_port, gpio_chip, reset_gpio_num, disable_spi_gpio_num, board,
                         elif index == 1:
                             login_prompt = True
 
-                    print("Booted Linux successfully")
+                    logger.info("Booted Linux successfully")
 
                     ssh_client.connect(board_ip, username="debian", pkey=ssh_key, allow_agent=False, look_for_keys=False)
-                    stdin, stdout, stderr = ssh_client.exec_command('sudo reboot')
-                    time.sleep(20)
+                    ssh_cmd(ssh_client, f'echo \'Acquire::http {{ Proxy "http://{nbdserver}:3142"; }}\' | sudo tee /etc/apt/apt.conf.d/proxy')
+                    copy_tests_to_board(logger, ssh_client)
+                    ssh_cmd(ssh_client, 'pytest-3')
             except:
                 # qemu_nbd will normally not exit until client disconnects
                 qemu_nbd.kill()
@@ -192,6 +190,43 @@ def test_linux(ser_port, gpio_chip, reset_gpio_num, disable_spi_gpio_num, board,
                 metadata_thread.join()
         
             qemu_nbd.terminate()
+
+def copy_tests_to_board(logger, ssh_client):
+    with ssh_client.open_sftp() as sftp_client:
+        sftp_client.chdir("/home/debian")
+        sftp_client.mkdir("tests")
+        sftp_client.chdir("tests")
+        for root, dirs, files in os.walk(TESTS_PATH):
+            remote_rel_path = os.path.relpath(root, TESTS_PATH)
+            remote_path = os.path.normpath("/home/debian/tests/" + remote_rel_path)
+            if remote_rel_path != ".":
+                sftp_client.chdir(remote_path)
+            for d in dirs:
+                sftp_client.mkdir(d)
+            for f in files:
+                local_path = os.path.join(root, f)
+                logger.debug("%s -> %s/%s", local_path, remote_path, f)
+                sftp_client.put(local_path, f)
+
+
+def ssh_cmd(ssh_client: SSHClient, cmd: str):
+    logger = logging.getLogger("agent.sshcmd")
+    stdin, stdout, stderr = ssh_client.exec_command(cmd)
+    output = ['', '']
+    def reader():
+        while line := stderr.readline():
+            logger.debug("STDERR: %s", line.strip())
+            output[1] += line
+    stderr_reader = threading.Thread(target=reader)
+    stderr_reader.start()
+    while line := stdout.readline():
+        logger.debug("STDOUT: %s", line.strip())
+        output[0] += line
+    stderr_reader.join()
+    if returncode := stdout.channel.recv_exit_status() != 0:
+        raise subprocess.CalledProcessError(returncode, cmd, output[0], output[1])
+    return output[0], output[1]
+
 
 def read_host_keys(p, board_ip, ssh_client):
     hostkeys = ssh_client.get_host_keys()
