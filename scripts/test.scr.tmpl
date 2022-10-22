@@ -13,22 +13,22 @@ else
   reset
 fi
 echo "== WRITE_IDBLOADER =="
-if tftpboot ${pxefile_addr_r} ${dashaddr}/%idbloader_file%; then
+if tftpboot ${pxefile_addr_r} rock-ci/%idbloader_file%; then
   setexpr blocksize ${filesize} / 0x200
   setexpr blocksize ${blocksize} + 1
   mmc write ${pxefile_addr_r} 0x40 ${blocksize}
 else
-  echo "== CI_FAIL: cant TFTP ${dashaddr}/%idbloader_file% =="
+  echo "== CI_FAIL: cant TFTP rock-ci/%idbloader_file% =="
   sleep 1
   reset
 fi
 echo "== WRITE_UBOOT =="
-if tftpboot ${pxefile_addr_r} ${dashaddr}/%u_boot_file%; then
+if tftpboot ${pxefile_addr_r} rock-ci/%u_boot_file%; then
   setexpr blocksize ${filesize} / 0x200
   setexpr blocksize ${blocksize} + 1
   mmc write ${pxefile_addr_r} 0x4000 ${blocksize}
 else
-  echo "== CI_FAIL: cant TFTP ${dashaddr}/%u_boot_file% =="
+  echo "== CI_FAIL: cant TFTP rock-ci/%u_boot_file% =="
   sleep 1
   reset
 fi

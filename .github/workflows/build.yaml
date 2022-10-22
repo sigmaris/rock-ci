@@ -427,7 +427,7 @@ jobs:
           cp bootfiles/rk3399-rockpro64.dtb "${TFTP_RUN_DIR}/rk3399-rockpro64.dtb"
           echo "::set-output name=full_tftp_run_dir::$TFTP_RUN_DIR"
     outputs:
-      # The full /srv/tftp/${dashaddr}/${{ github.run_id }} directory
+      # The full /srv/tftp/rock-ci/${{ github.run_id }} directory
       full_tftp_run_dir: ${{ steps.deploy.outputs.full_tftp_run_dir }}
 
   test_uboot:

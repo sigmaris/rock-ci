@@ -157,10 +157,7 @@ def test_linux(ser_port, gpio_chip, reset_gpio_num, disable_spi_gpio_num, board,
                 p.send(f"setenv nbdserver {nbdserver}\n")
                 p.expect_exact("=>")
 
-                p.send("setexpr dashaddr gsub : - ${ethaddr}\n")
-                p.expect_exact("=>")
-
-                p.send('setenv boot_script_dhcp "${dashaddr}/' + tftp_run_dir + '/bootlinux.scr.uimg"\n')
+                p.send('setenv boot_script_dhcp "rock-ci/' + tftp_run_dir + '/bootlinux.scr.uimg"\n')
                 p.expect_exact("=>")
 
                 p.send("run bootcmd_dhcp\n")
@@ -271,9 +268,7 @@ def test_uboot(ser_port, gpio_chip, reset_gpio_num, disable_spi_gpio_num, script
         print("")
         logger.info("At U-boot prompt, disable SPI and DHCP-boot")
         disable_spi_gpio.write(True)
-        p.send('setexpr dashaddr gsub : - ${ethaddr}\n')
-        p.expect("=> ")
-        p.send('setenv boot_script_dhcp "${dashaddr}/')
+        p.send('setenv boot_script_dhcp "rock-ci/')
         # Wait for command echo
         p.expect('setenv boot_script_dhcp')
         p.send(script)
